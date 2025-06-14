@@ -25,7 +25,7 @@ const dbConfig = {
     database: process.env.DB_NAME,
     port: parseInt(process.env.DB_PORT, 10), // Add and parse the port
     ssl: {
-        ca: fs.readFileSync(process.env.DB_SSL_CA_PATH), // Use the CA certificate
+        ca: process.env.DB_SSL_CA_CONTENT || fs.readFileSync(process.env.DB_SSL_CA_PATH), // Use the CA certificate
         // rejectUnauthorized: true // This is true by default and recommended for security
     }
 };
