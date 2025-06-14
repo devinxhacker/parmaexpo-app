@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "parmaexpo-app",
+    "name": "Parma",
     "slug": "parmaexpo-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,14 +9,19 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kirannandiexpo.parmaexpoapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.kirannandiexpo.parmaexpoapp"
     },
     "web": {
       "bundler": "metro",
@@ -33,10 +38,18 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fb43a528-e09a-4738-9e60-23ce3dedf7c7"
+      }
+    },
+    "owner": "kirannandiexpo"
   }
 }

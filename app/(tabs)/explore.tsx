@@ -1,104 +1,201 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, View, TextInput } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { ThemedText } from '@/components/ThemedText';
+import { FontAwesome } from '@expo/vector-icons'; // For the plus icon
+import { ThemedView } from '@/components/ThemedView';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { Colors } from '@/constants/Colors'; // For placeholder text color
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+
+
+interface ReportListItem {
+  report_id: string;
+  patients_name: string;
+  test_date: string;
+  status: string | null;
+  tests: string; // Comma-separated list of test names
+}
+
+// Define ReportCard as a functional component
+const ReportCard = ({
+  item,
+  cardBackgroundColor,
+  cardBorderColor,
+  onPress
+}: {
+  item: ReportListItem;
+  cardBackgroundColor: string;
+  cardBorderColor: string;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity onPress={onPress}>
+    <ThemedView style={[styles.reportItemCard, { backgroundColor: cardBackgroundColor, borderColor: cardBorderColor }]}>
+      <ThemedView style={styles.reportItemHeader}>
+        <ThemedText type="defaultSemiBold">Report ID: {item.report_id}</ThemedText>
+        <ThemedText style={styles.statusText(item.status)}>{item.status || 'N/A'}</ThemedText>
+      </ThemedView>
+      <ThemedText>Patient: {item.patients_name}</ThemedText>
+      <ThemedText>Tests: {item.tests}</ThemedText>
+      <ThemedText>Date: {new Date(item.test_date).toLocaleDateString()}</ThemedText>
+    </ThemedView>
+  </TouchableOpacity>
+);
+
 export default function TabTwoScreen() {
+
+  const router = useRouter();
+  const [reports, setReports] = useState<ReportListItem[]>([]);
+  const [filteredReports, setFilteredReports] = useState<ReportListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fabBackgroundColor = useThemeColor({ light: Colors.light.tint, dark: Colors.dark.tint }, 'tint');
+  const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'background');
+  const cardBorderColor = useThemeColor({ light: '#E0E0E0', dark: '#3A3A3C' }, 'background');
+  const placeholderTextColor = useThemeColor({ light: Colors.light.gray, dark: Colors.dark.gray }, 'gray');
+
+
+  const fetchReports = async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/reports`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.success) {
+        setReports(data.reports);
+        setFilteredReports(data.reports);
+      } else {
+        throw new Error(data.message || 'Failed to fetch reports');
+      }
+    } catch (e: any) {
+      console.error("Failed to fetch reports:", e);
+      setError(e.message || 'An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  // Refetch reports when the screen comes into focus after a potential add/edit operation
+  useFocusEffect(
+    useCallback(() => {
+      // Don't refetch if it's the initial load handled by useEffect
+      if (!loading) {
+        fetchReports();
+      }
+    }, [loading]) // Add dependencies if fetchReports relies on other state/props
+  );
+
+  // useEffect(() => {
+  //   if (searchTerm === '') {
+  //     setFilteredReports(reports);
+  //   } else {
+  //     setFilteredReports(
+  //       reports.filter(report =>
+  //         report.report_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //         report.patients_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //         report.tests.toLowerCase().includes(searchTerm.toLowerCase())
+  //       )
+  //     );
+  //   }
+  // }, [searchTerm, reports]);
+
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchReports();
+  }, []);
+
+  if (loading && reports.length === 0) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator size="large" />
+        <ThemedText>Loading Reports...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ThemedText type="defaultSemiBold" style={styles.errorText}>Error loading reports:</ThemedText>
+        <ThemedText style={styles.errorText}>{error}</ThemedText>
+        <TouchableOpacity onPress={fetchReports} style={styles.retryButton}>
+          <ThemedText style={{ color: '#fff' }}>Retry</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+    );
+  }
+
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerBackgroundColor={{ light: 'rgb(255, 180, 207)', dark: 'rgb(71, 0, 31)' }}
       headerImage={
         <IconSymbol
           size={310}
-          color="#808080"
+          color="#D50099"
           name="chevron.left.forwardslash.chevron.right"
           style={styles.headerImage}
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
+        <ThemedText type="title">Reports</ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
+      {/* <TextInput
+        style={[styles.searchInput, { backgroundColor: cardBackgroundColor, color: useThemeColor({}, 'text'), borderColor: cardBorderColor }]}
+        placeholder="Search Reports by ID, Patient, Tests..."
+        placeholderTextColor={placeholderTextColor}
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+      /> */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: fabBackgroundColor }]}
+        onPress={() => router.push('/(screens)/add_report')}
+      >
+        <FontAwesome name="plus" size={24} color="white" />
+      </TouchableOpacity>
+      <ScrollView style={styles.listContentContainer}>
+        {reports.length > 0 ? (
+          reports.map((report) => (
+            <ReportCard
+              key={report.report_id}
+              item={report}
+              cardBackgroundColor={cardBackgroundColor}
+              cardBorderColor={cardBorderColor}
+              onPress={() => router.push(`/(screens)/report/${report.report_id}`)}
+            />
+          ))
+        ) : (
+          // Display this when reports array is empty (and not initial loading/error)
+          <ThemedView style={[styles.centered, { minHeight: 150, paddingTop: 20 }]}>
+            <ThemedText>No reports found.</ThemedText>
+          </ThemedView>
+        )}
+      </ScrollView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   headerImage: {
-    color: '#808080',
     bottom: -90,
     left: -35,
     position: 'absolute',
@@ -106,5 +203,83 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     gap: 8,
+  },
+  searchInput: {
+    height: 45,
+    borderWidth: 1,
+    paddingHorizontal: 15,
+    marginHorizontal: 16, // Match ParallaxScrollView padding
+    marginTop: 10,
+    borderRadius: 8,
+    fontSize: 16,
+  },
+
+  container: {
+    flex: 1,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%', // Ensure centered view takes full width of its container
+    padding: 16,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  listContentContainer: {
+    padding: 8,
+  },
+  reportItemCard: {
+    padding: 16,
+    marginVertical: 8,
+    marginHorizontal: 0,
+    borderRadius: 8,
+    borderWidth: 1,
+    // elevation: 2, // Android shadow
+    // shadowColor: '#000', // iOS shadow
+    // shadowOffset: { width: 0, height: 1 },
+    // shadowOpacity: 0.2,
+    // shadowRadius: 2,
+  },
+  reportItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    backgroundColor: "transparent",
+  },
+  statusText: (status: string | null) => ({
+    fontWeight: 'bold',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden', // for borderRadius to work on Text on Android
+    color: status === 'Completed' ? 'green' : status === 'Pending' ? 'orange' : 'grey',
+    // backgroundColor: status === 'Completed' ? '#D4EDDA' : status === 'Pending' ? '#FFF3CD' : '#E2E3E5',
+  }),
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 16,
+    top: 1,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
 });
