@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 interface DoctorData {
     doctor_name: string;

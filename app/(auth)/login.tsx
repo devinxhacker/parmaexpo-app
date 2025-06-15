@@ -5,7 +5,7 @@ import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { Button, StyleSheet, TextInput, View, Alert, Platform } from 'react-native';
 
-const backendUrl = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const backendUrl = "https://parmaexpo-app.vercel.app";
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');

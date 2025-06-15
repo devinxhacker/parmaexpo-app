@@ -11,7 +11,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Colors } from '@/constants/Colors'; // For placeholder text color
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 
 interface ReportListItem {

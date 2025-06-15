@@ -7,7 +7,7 @@ import RNPickerSelect from 'react-native-picker-select';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 interface TestData {
     test_name: string;

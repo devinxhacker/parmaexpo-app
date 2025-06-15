@@ -11,7 +11,7 @@ import { ThemedView } from '@/components/ThemedView';
 
 // Define the API base URL - REPLACE <YOUR_LOCAL_IP> with your actual local IP address
 // Example: const API_BASE_URL = 'http://192.168.1.5:3000/api';
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 interface ReportStatus {
   status: string | null; // Status can be null if not set in DB

@@ -11,7 +11,7 @@ import { ExternalLink } from '@/components/ExternalLink';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
-const backendUrl = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const backendUrl = "https://parmaexpo-app.vercel.app";
 
 interface UserDetails {
     user_id: number;

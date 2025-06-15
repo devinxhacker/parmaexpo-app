@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useColorScheme } from '@/hooks/useColorScheme'; // Import useColorScheme
 import { Colors } from '@/constants/Colors'; // Import Colors
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 export default function AddPatientScreen() {
     const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';

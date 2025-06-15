@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter, useFocusEffect, Stack } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 interface ReportListItem {
     report_id: string;
@@ -21,11 +21,17 @@ export default function ReportsTodayScreen() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
-
+    const isInitialMount = useRef(true);
+    const isFetching = useRef(false);
     const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'background');
     const cardBorderColor = useThemeColor({ light: '#E0E0E0', dark: '#3A3A3C' }, 'background');
 
-    const fetchTodaysReports = async () => {
+    const fetchTodaysReports = useCallback(async () => {
+        if (isFetching.current) {
+            // console.log("Fetch already in progress, skipping."); // Optional: for debugging
+            return;
+        }
+        isFetching.current = true;
         try {
             setError(null);
             setLoading(true);
@@ -38,33 +44,43 @@ export default function ReportsTodayScreen() {
             if (data.success) {
                 setReports(data.reports);
             } else {
+                setReports([]);
                 throw new Error(data.message || 'Failed to fetch today\'s reports');
             }
         } catch (e: any) {
             console.error("Failed to fetch today's reports:", e);
             setError(e.message || 'An unexpected error occurred.');
+            setReports([]);
         } finally {
             setLoading(false);
             setRefreshing(false);
+            isFetching.current = false;
         }
-    };
+    }, []); 
 
     useEffect(() => {
         fetchTodaysReports();
-    }, []);
+    }, [fetchTodaysReports]);
 
     useFocusEffect(
         useCallback(() => {
-            if (!loading) {
-                fetchTodaysReports();
+            if (isInitialMount.current) {
+                // On initial mount, useEffect handles the fetch.
+                // We mark that the initial mount/focus has passed.
+                isInitialMount.current = false;
+            } else {
+                // On subsequent focuses, refetch if not already loading.
+                if (!loading) {
+                    fetchTodaysReports();
+                }
             }
-        }, [loading])
+        }, [fetchTodaysReports]) 
     );
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
         fetchTodaysReports();
-    }, []);
+    }, [fetchTodaysReports]);
 
     const renderReportItem = ({ item }: { item: ReportListItem }) => (
         <TouchableOpacity onPress={() => router.push(`/(screens)/report/${item.report_id}`)}>

@@ -8,7 +8,7 @@ import { FontAwesome } from '@expo/vector-icons';
 // import RNPrint from 'react-native-print';
 // import RNHTMLtoPDF from 'react-native-html-to-pdf';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_SERVER;
+const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 interface ReportDetailItem {
     report_table_id: number; // PK of the report table row
