@@ -417,6 +417,7 @@ app.get('/api/patients', async (req, res) => {
         const [patients] = await connection.execute(`
             SELECT 
                 patient_id,
+                patient_salutation,
                 patients_name,
                 phone_number,
                 gender,
@@ -811,6 +812,37 @@ app.delete('/api/tests/:testId', async (req, res) => {
     } catch (error) {
         console.error('Error deleting test:', error);
         res.status(500).json({ success: false, message: 'Server error deleting test. Check for related components or reports.' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+// Get a single patient's details by patient_id
+app.get('/api/patients/:patientId', async (req, res) => {
+    let connection;
+    try {
+        const { patientId } = req.params;
+        connection = await pool.getConnection();
+        const [results] = await connection.execute(
+            'SELECT * FROM patients WHERE patient_id = ?', // Select all columns
+            [patientId]
+        );
+        connection.release();
+
+        if (results.length > 0) {
+            res.json({
+                success: true,
+                patient: results[0] // Send the single patient object
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Patient not found'
+            });
+        }
+    } catch (error) {
+        console.error('Get patient detail error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching patient details' });
     } finally {
         if (connection) connection.release();
     }

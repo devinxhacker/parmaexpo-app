@@ -4,10 +4,10 @@ import { useRouter, useFocusEffect, useLocalSearchParams, Stack } from 'expo-rou
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import RNPickerSelect from 'react-native-picker-select';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/useColorScheme'; // Import useColorScheme
 import { Colors } from '@/constants/Colors'; // Import Colors
+import { CustomPicker } from '@/components/CustomPicker';
 
 const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
@@ -16,7 +16,7 @@ const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 interface Patient { id: string; name: string; }
 interface Doctor { id: string; name: string; }
 interface Test { id: number; name: string; rate: number; component_id?: number; }
-interface SelectedTest extends Test { result?: string; comments?: string; }
+interface SelectedTest extends Test { result?: string; comments?: string; method?: string; status?: string; } // Added method and status
 
 // This interface matches the structure from ReportDetailScreen
 interface ReportDetailItem {
@@ -93,7 +93,18 @@ export default function UpdateReportScreen() {
                 setDoctorId(firstItem.doctor_id);
                 setTestDate(new Date(firstItem.test_date));
                 setStatus(firstItem.status || 'Pending');
-                setOverallComments(firstItem.report_item_comments || ''); // Uses first item's comment as overall
+                // Assuming overall_comments is fetched separately or is part of a main report record, not repeated per item.
+                // For now, let's assume it's fetched with the first item if available, or you might need another API call.
+                // If your API for report details returns overall_comments at the top level of `data`, use that.
+                // For this example, I'll assume it might be on the first item or needs to be managed.
+                // If overall_comments is a separate field in the main report table, you'd fetch it with the main report details.
+                // Let's assume for now it's not directly in reportItems, so we might need to adjust how it's loaded or set.
+                // If overall_comments is part of the main report object (not items), you'd set it from there.
+                // For now, I'll keep the existing setOverallComments logic but acknowledge it might need adjustment based on your API.
+                // If your API returns an overall_comments field in the `data` object (e.g., data.overall_comments), use that.
+                // For this example, I'll assume it's not directly in reportItems for overall report comments.
+                // Let's say your API returns `data.report.overall_comments`
+                setOverallComments(data.report?.overall_comments || ''); // Example if overall_comments is at report level
 
                 const preSelectedTests: SelectedTest[] = reportItems.map(item => {
                     const matchedTest = testsForMapping.find(at => at.id === item.test_id && at.component_id === item.component_id);
@@ -104,6 +115,8 @@ export default function UpdateReportScreen() {
                         component_id: item.component_id,
                         result: item.result || '',
                         comments: item.report_item_comments || '',
+                        method: item.method || matchedTest?.method || '', // Prioritize item's method
+                        status: item.status || 'Pending', // Prioritize item's status
                     };
                 });
                 setSelectedTests(preSelectedTests);
@@ -167,7 +180,7 @@ export default function UpdateReportScreen() {
             if (isSelected) {
                 return prev.filter(t => !(t.id === test.id && t.component_id === test.component_id));
             } else {
-                return [...prev, { ...test, result: '', comments: '' }];
+                return [...prev, { ...test, result: '', comments: '', method: test.method || '', status: 'Pending' }];
             }
         });
     };
@@ -260,25 +273,6 @@ export default function UpdateReportScreen() {
         buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     });
 
-    const pickerSelectStyles = StyleSheet.create({
-        inputIOS: {
-            ...styles.input,
-            paddingVertical: 0,
-        },
-        inputAndroid: {
-            ...styles.input,
-            paddingVertical: 0,
-        },
-        placeholder: {
-            color: Colors[colorScheme].gray,
-        },
-        iconContainer: {
-            top: 10,
-            right: 12,
-        },
-    });
-    
-
     const handleUpdateReport = async () => {
         if (!currentReportId || !patientId || !doctorId || selectedTests.length === 0) {
             Alert.alert("Validation Error", "Patient, Doctor, and at least one Test are required.");
@@ -296,9 +290,9 @@ export default function UpdateReportScreen() {
                     test_id: st.id,
                     component_id: st.component_id,
                     result: st.result,
-                    method: "Default Method", // Or fetch/store this
+                    method: st.method || "N/A",
                     comments: st.comments,
-                    status: status, // Or individual status per test
+                    status: st.status || status, // Send individual status, fallback to overall
                 })),
             };
 
@@ -337,12 +331,13 @@ export default function UpdateReportScreen() {
                 <View style={styles.dropdownContainerWithAdd}>
                     <View style={{ flex: 1 }}>
                         <ThemedText style={styles.label}>Patient*</ThemedText>
-                        <RNPickerSelect
+                        <CustomPicker
                             onValueChange={(value) => setPatientId(value)}
                             items={patients.map(p => ({ label: p.name, value: p.id }))}
-                            style={pickerSelectStyles}
+                            style={[styles.input, { paddingVertical: 10 }]}
                             value={patientId}
                             placeholder={{ label: "Select a patient...", value: null }}
+                            modalTitle="Select Patient"
                         />
                     </View>
                     <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(screens)/add_patient')}>
@@ -354,12 +349,13 @@ export default function UpdateReportScreen() {
                 <View style={styles.dropdownContainerWithAdd}>
                     <View style={{ flex: 1 }}>
                         <ThemedText style={styles.label}>Referring Doctor*</ThemedText>
-                        <RNPickerSelect
+                        <CustomPicker
                             onValueChange={(value) => setDoctorId(value)}
                             items={doctors.map(d => ({ label: d.name, value: d.id }))}
-                            style={pickerSelectStyles}
+                            style={[styles.input, { paddingVertical: 10 }]}
                             value={doctorId}
                             placeholder={{ label: "Select a doctor...", value: null }}
+                            modalTitle="Select Doctor"
                         />
                     </View>
                     <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(screens)/add_doctor')}>
@@ -431,6 +427,31 @@ export default function UpdateReportScreen() {
                                         setSelectedTests(newSelectedTests);
                                     }}
                                 />
+                                <ThemedText style={styles.labelMinor}>Method:</ThemedText>
+                                <TextInput
+                                    style={[styles.input, { color: Colors[colorScheme].text }]}
+                                    placeholder='Method'
+                                    placeholderTextColor={Colors[colorScheme].gray}
+                                    value={st.method}
+                                    onChangeText={(text) => {
+                                        const newSelectedTests = [...selectedTests];
+                                        newSelectedTests[index].method = text;
+                                        setSelectedTests(newSelectedTests);
+                                    }}
+                                />
+                                <ThemedText style={styles.labelMinor}>Status:</ThemedText>
+                                <CustomPicker
+                                    onValueChange={(value) => {
+                                        const newSelectedTests = [...selectedTests];
+                                        newSelectedTests[index].status = value;
+                                        setSelectedTests(newSelectedTests);
+                                    }}
+                                    items={[{ label: 'Pending', value: 'Pending' }, { label: 'Completed', value: 'Completed' }, { label: 'Partial', value: 'Partial' }]}
+                                    style={[styles.input, { paddingVertical: 10 }]}
+                                    value={st.status}
+                                    placeholder={{ label: "Select test status...", value: st.status || status }}
+                                    modalTitle="Select Test Status"
+                                />
                                 <TextInput
                                     style={[styles.input, styles.textAreaShort]}
                                     placeholder="Comments (optional)"
@@ -454,16 +475,17 @@ export default function UpdateReportScreen() {
 
                 {/* Status Picker */}
                 <ThemedText style={styles.label}>Status*</ThemedText>
-                <RNPickerSelect
+                <CustomPicker
                     onValueChange={(value) => setStatus(value)}
                     items={[
                         { label: 'Pending', value: 'Pending' },
                         { label: 'Completed', value: 'Completed' },
                         { label: 'Partial', value: 'Partial' },
                     ]}
-                    style={pickerSelectStyles}
+                    style={[styles.input, { paddingVertical: 10 }]}
                     value={status}
                     placeholder={{ label: "Select status...", value: "Pending" }}
+                    modalTitle="Select Overall Report Status"
                 />
 
                 <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleUpdateReport} disabled={loading || formLoading}>

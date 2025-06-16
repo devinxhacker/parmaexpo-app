@@ -3,9 +3,9 @@ import { StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityInd
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import RNPickerSelect from 'react-native-picker-select';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+import { CustomPicker } from '@/components/CustomPicker';
 
 const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
@@ -116,7 +116,6 @@ export default function UpdateTestScreen() {
         button: { backgroundColor: Colors[colorScheme].tint, padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 20 },
         buttonDisabled: { backgroundColor: '#A9A9A9' }, buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     });
-    const pickerSelectStyles = StyleSheet.create({ inputIOS: { ...styles.input, marginBottom: 15, justifyContent: 'center' }, inputAndroid: { ...styles.input, marginBottom: 15, justifyContent: 'center' }, placeholder: { color: Colors[colorScheme].gray, }, });
 
     if (formLoading) return <ThemedView style={styles.container}><ActivityIndicator size="large" /></ThemedView>;
 
@@ -128,7 +127,14 @@ export default function UpdateTestScreen() {
                 <ThemedText style={styles.label}>Test Name*</ThemedText><TextInput style={styles.input} value={testData.test_name} onChangeText={v => handleChange('test_name', v)} placeholderTextColor={styles.placeholderText.color} />
                 <ThemedText style={styles.label}>Test Rate (₹)*</ThemedText><TextInput style={styles.input} value={testData.test_rate} onChangeText={v => handleChange('test_rate', v)} keyboardType="numeric" placeholderTextColor={styles.placeholderText.color} />
                 <ThemedText style={styles.label}>Category*</ThemedText>
-                <RNPickerSelect onValueChange={(value) => handleChange('category_id', value)} items={categories} style={pickerSelectStyles} value={testData.category_id} placeholder={{ label: "Select a category...", value: undefined }} />
+                <CustomPicker
+                    onValueChange={(value) => handleChange('category_id', value)}
+                    items={categories}
+                    style={[styles.input, { marginBottom: 15 }]} // Apply input style
+                    value={testData.category_id}
+                    placeholder={{ label: "Select a category...", value: undefined }}
+                    modalTitle="Select Category"
+                />
                 <ThemedText style={styles.label}>Report Heading</ThemedText><TextInput style={styles.input} value={testData.report_heading} onChangeText={v => handleChange('report_heading', v)} placeholderTextColor={styles.placeholderText.color} />
                 <ThemedText style={styles.label}>Test Code</ThemedText><TextInput style={styles.input} value={testData.test_code} onChangeText={v => handleChange('test_code', v)} placeholderTextColor={styles.placeholderText.color} />
                 <ThemedText style={styles.label}>Method</ThemedText><TextInput style={[styles.input, styles.textArea]} value={testData.method} onChangeText={v => handleChange('method', v)} multiline placeholderTextColor={styles.placeholderText.color} />

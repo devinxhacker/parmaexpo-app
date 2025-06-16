@@ -12,6 +12,7 @@ const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
 interface Patient {
     patient_id: string;
+    patient_salutation: string;
     patients_name: string;
     phone_number: number | null;
     gender: string;
@@ -96,7 +97,7 @@ export default function PatientsScreen() {
 
     const renderPatientItem = ({ item }: { item: Patient }) => (
         <ThemedView style={[styles.card, { backgroundColor: cardBackgroundColor, borderColor: cardBorderColor }]}>
-            <ThemedText type="subtitle">{item.patients_name}</ThemedText>
+            <ThemedText type="subtitle">{item.patient_salutation} {item.patients_name}</ThemedText>
             <ThemedText>ID: {item.patient_id}</ThemedText>
             <ThemedText>Gender: {item.gender}</ThemedText>
             {item.age_years !== null && <ThemedText>Age: {item.age_years} Yrs</ThemedText>}

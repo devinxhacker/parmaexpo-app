@@ -39,35 +39,29 @@ export default function UpdatePatientScreen() {
         const fetchPatientDetails = async () => {
             setFormLoading(true);
             try {
-                // Fetch all patients and find the one with patientId
-                // Ideally, you'd have a GET /api/patients/:patientId endpoint
-                const response = await fetch(`${API_BASE_URL}/api/patients`);
-                const allPatientsData = await response.json();
-                if (allPatientsData.success) {
-                    const currentPatient = allPatientsData.patients.find((pat: any) => pat.patient_id === patientId);
-                    if (currentPatient) {
-                        setPatientData({
-                            patient_salutation: currentPatient.patient_salutation || '',
-                            patients_name: currentPatient.patients_name || '',
-                            guardian_name: currentPatient.guardian_name || '',
-                            phone_number: currentPatient.phone_number?.toString() || '',
-                            gender: currentPatient.gender || '',
-                            age_years: currentPatient.age_years?.toString() || '',
-                            age_months: currentPatient.age_months?.toString() || '',
-                            age_days: currentPatient.age_days?.toString() || '',
-                            alternate_phone_number: currentPatient.alternate_phone_number?.toString() || '',
-                            email: currentPatient.email || '',
-                            address: currentPatient.address || '',
-                            city: currentPatient.city || '',
-                            state: currentPatient.state || '',
-                            zip_code: currentPatient.zip_code || '',
-                        });
-                    } else {
-                        Alert.alert("Error", "Patient details not found.");
-                        router.back();
-                    }
+                const response = await fetch(`${API_BASE_URL}/api/patients/${patientId}`); // Use the new specific endpoint
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const currentPatient = data.patient; // The API now returns a single patient object
+                    setPatientData({
+                        patient_salutation: currentPatient.patient_salutation || '',
+                        patients_name: currentPatient.patients_name || '',
+                        guardian_name: currentPatient.guardian_name || '',
+                        phone_number: currentPatient.phone_number?.toString() || '',
+                        gender: currentPatient.gender || '',
+                        age_years: currentPatient.age_years?.toString() || '',
+                        age_months: currentPatient.age_months?.toString() || '',
+                        age_days: currentPatient.age_days?.toString() || '',
+                        alternate_phone_number: currentPatient.alternate_phone_number?.toString() || '',
+                        email: currentPatient.email || '',
+                        address: currentPatient.address || '',
+                        city: currentPatient.city || '',
+                        state: currentPatient.state || '',
+                        zip_code: currentPatient.zip_code || '',
+                    });
                 } else {
-                    throw new Error(allPatientsData.message || "Failed to fetch patient details");
+                    throw new Error(data.message || "Failed to fetch patient details");
                 }
             } catch (error: any) {
                 Alert.alert("Error", error.message || "Could not load patient details.");
@@ -77,7 +71,7 @@ export default function UpdatePatientScreen() {
             }
         };
         fetchPatientDetails();
-    }, [patientId]);
+    }, [patientId, router]);
 
     const handleUpdatePatient = async () => {
         if (!patientId || !patientData.patients_name || !patientData.gender) {

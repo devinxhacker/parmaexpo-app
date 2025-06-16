@@ -3,9 +3,9 @@ import { StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityInd
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import RNPickerSelect from 'react-native-picker-select';
 import { useColorScheme } from '@/hooks/useColorScheme'; // Import useColorScheme
 import { Colors } from '@/constants/Colors'; // Import Colors
+import { CustomPicker } from '@/components/CustomPicker';
 
 
 const API_BASE_URL = "https://parmaexpo-app.vercel.app";
@@ -67,12 +67,6 @@ export default function AddTestScreen() {
         buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     });
 
-    const pickerSelectStyles = StyleSheet.create({
-        inputIOS: { ...styles.input, marginBottom: 15, justifyContent: 'center' },
-        inputAndroid: { ...styles.input, marginBottom: 15, justifyContent: 'center' },
-        placeholder: { color: 'grey' },
-    });
-
     const handleAddTest = async () => {
         if (!testName || !testRate || !categoryId) {
             Alert.alert("Validation Error", "Test Name, Rate, and Category are required.");
@@ -127,11 +121,13 @@ export default function AddTestScreen() {
                 <TextInput style={styles.input} value={testRate} onChangeText={setTestRate} placeholder="e.g., 150.00" keyboardType="numeric" placeholderTextColor={styles.placeholderText.color} />
 
                 <ThemedText style={styles.label}>Category*</ThemedText>
-                <RNPickerSelect
+                <CustomPicker
                     onValueChange={(value) => setCategoryId(value)}
                     items={categories}
-                    style={pickerSelectStyles}
+                    value={categoryId}
+                    style={[styles.input, { marginBottom: 15 }]} // Apply input style, ensure text color is handled by CustomPicker or override here
                     placeholder={{ label: "Select a category...", value: null }}
+                    modalTitle="Select Category"
                 />
 
                 <ThemedText style={styles.label}>Report Heading</ThemedText>
@@ -157,4 +153,3 @@ export default function AddTestScreen() {
     
 
 }
-
