@@ -4,9 +4,8 @@ import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from 'expo-rou
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome } from '@expo/vector-icons';
-// For PDF and Print, you'd import libraries like:
-// import RNPrint from 'react-native-print';
-// import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 const API_BASE_URL = "https://parmaexpo-app.vercel.app";
 
@@ -40,6 +39,7 @@ export default function ReportDetailScreen() {
     const [reportDetails, setReportDetails] = useState<ReportDetailItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isProcessingPdf, setIsProcessingPdf] = useState(false);
 
     const fetchReportDetails = async () => {
         if (!reportId) return;
@@ -78,6 +78,49 @@ export default function ReportDetailScreen() {
         }, [loading, reportId])
     );
 
+    const generateReportHtml = (reportData: ReportDetailItem[]): string => {
+        if (!reportData || reportData.length === 0) {
+            // This case should ideally be handled before calling this function,
+            // but as a fallback:
+            return "<html><body><h1>No report data available to generate PDF.</h1></body></html>";
+        }
+        const common = reportData[0];
+
+        const testItemsHtml = reportData.map(item => `
+            <div class="testItem">
+                <p style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${item.test_name}${item.component_name ? ` - ${item.component_name}` : ''}</p>
+                <p>Result: ${item.result || 'N/A'}</p>
+                ${item.reference_range ? `<p>Reference: ${item.reference_range}</p>` : ''}
+                ${item.test_unit ? `<p>Unit: ${item.test_unit}</p>` : ''}
+                ${item.method ? `<p>Method: ${item.method}</p>` : ''}
+                ${item.report_item_comments ? `<p>Comments: ${item.report_item_comments}</p>` : ''}
+                ${item.status ? `<p>Status: ${item.status}</p>` : ''}
+                ${item.test_rate !== null && item.test_rate !== undefined ? `<p>Rate: ${item.test_rate}</p>` : ''}
+            </div>
+        `).join('');
+
+        return `
+            <html>
+            <head>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 20px; color: #333; }
+                    .title { font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 25px; }
+                    .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
+                    .subtitle { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #007AFF; }
+                    .testItem { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; }
+                    .testItem:last-child { border-bottom: none; }
+                    p { margin: 6px 0; line-height: 1.6; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="title">Report: ${common.report_id}</div>
+                <div class="section"><div class="subtitle">Patient Information</div><p><strong>Name:</strong> ${common.patients_name}</p><p><strong>Gender:</strong> ${common.gender}</p><p><strong>Age:</strong> ${common.age_years || 0}Y ${common.age_months || 0}M ${common.age_days || 0}D</p><p><strong>Referred by:</strong> Dr. ${common.doctor_name}</p><p><strong>Report Date:</strong> ${new Date(common.test_date).toLocaleDateString()}</p></div>
+                <div class="section"><div class="subtitle">Test Results</div>${testItemsHtml}</div>
+            </body>
+            </html>
+        `;
+    };
+
 
     const handleDeleteReport = async () => {
         if (!reportId) return;
@@ -111,17 +154,43 @@ export default function ReportDetailScreen() {
     };
 
     const handleSharePdf = async () => {
-        Alert.alert("Share PDF", "PDF sharing functionality to be implemented.");
-        // Example:
-        // const options = { html: '<h1>PDF Content</h1>', fileName: `report_${reportId}`, directory: 'Documents' };
-        // const file = await RNHTMLtoPDF.convert(options);
-        // Share.open({ url: `file://${file.filePath}` });
+        if (!reportDetails || reportDetails.length === 0) {
+            Alert.alert("No Data", "Report details are not available to generate a PDF.");
+            return;
+        }
+        setIsProcessingPdf(true);
+        try {
+            const htmlContent = generateReportHtml(reportDetails);
+            const { uri } = await Print.printToFileAsync({ html: htmlContent });
+            console.log('File has been saved to:', uri);
+            if (!(await Sharing.isAvailableAsync())) {
+                Alert.alert("Sharing not available", "Sharing is not available on this device.");
+                return;
+            }
+            await Sharing.shareAsync(uri, { dialogTitle: `Share Report ${reportId}` });
+        } catch (error: any) {
+            console.error("Error sharing PDF:", error);
+            Alert.alert("Error", `Failed to share PDF: ${error.message}`);
+        } finally {
+            setIsProcessingPdf(false);
+        }
     };
 
     const handlePrintReport = async () => {
-        Alert.alert("Print Report", "Printing functionality to be implemented.");
-        // Example:
-        // await RNPrint.print({ html: '<h1>Print Content</h1>' });
+        if (!reportDetails || reportDetails.length === 0) {
+            Alert.alert("No Data", "Report details are not available to print.");
+            return;
+        }
+        setIsProcessingPdf(true);
+        try {
+            const htmlContent = generateReportHtml(reportDetails);
+            await Print.printAsync({ html: htmlContent });
+        } catch (error: any) {
+            console.error("Error printing report:", error);
+            Alert.alert("Error", `Failed to print report: ${error.message}`);
+        } finally {
+            setIsProcessingPdf(false);
+        }
     };
 
     const handleUpdateReport = () => {
@@ -133,7 +202,7 @@ export default function ReportDetailScreen() {
     if (loading) {
         return (
             <ThemedView style={styles.centered}>
-                <ActivityIndicator size="large" />
+                <ActivityIndicator size="large" color={styles.retryButton.backgroundColor} />
                 <ThemedText>Loading Report Details...</ThemedText>
             </ThemedView>
         );
@@ -196,21 +265,24 @@ export default function ReportDetailScreen() {
 
                 <View style={styles.buttonContainer}>
                     {/* <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={handleDeleteReport}>
-                        <ThemedText style={styles.buttonText}>Delete Report</ThemedText>
+                        <ThemedText style={styles.buttonText}>Delete Report (Old)</ThemedText>
                     </TouchableOpacity> */}
-                    <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={handleSharePdf}>
-                        <ThemedText style={styles.buttonText}>Share PDF</ThemedText>
+                    <TouchableOpacity style={[styles.button, styles.actionButton, isProcessingPdf && styles.buttonDisabled]} onPress={handleSharePdf} disabled={isProcessingPdf}>
+                        {isProcessingPdf ? <ActivityIndicator color="#fff" size="small" /> : <ThemedText style={styles.buttonText}>Share PDF</ThemedText>}
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={handlePrintReport}>
-                        <ThemedText style={styles.buttonText}>Print Report</ThemedText>
+                    <TouchableOpacity style={[styles.button, styles.actionButton, isProcessingPdf && styles.buttonDisabled]} onPress={handlePrintReport} disabled={isProcessingPdf}>
+                         {isProcessingPdf ? <ActivityIndicator color="#fff" size="small" /> : <ThemedText style={styles.buttonText}>Print Report</ThemedText>}
                     </TouchableOpacity>
                 </View>
                 <View style={styles.iconButtonContainer}>
-                    <TouchableOpacity style={[styles.iconButtonBase, styles.updateButton]} onPress={handleUpdateReport}>
-                        <FontAwesome name="pencil" size={22} color="white" />
-                        <ThemedText style={styles.iconButtonText}>Update</ThemedText>
+                    <TouchableOpacity 
+                        style={[styles.iconButtonBase, styles.updateButton, isProcessingPdf && styles.buttonDisabled]} 
+                        onPress={handleUpdateReport}
+                        disabled={isProcessingPdf}>
+                            <FontAwesome name="pencil" size={22} color="white" />
+                            <ThemedText style={styles.iconButtonText}>Update</ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.iconButtonBase, styles.deleteButton]} onPress={handleDeleteReport}>
+                    <TouchableOpacity style={[styles.iconButtonBase, styles.deleteButton, isProcessingPdf && styles.buttonDisabled]} onPress={handleDeleteReport} disabled={isProcessingPdf}>
                         <FontAwesome name="trash" size={22} color="white" />
                         <ThemedText style={styles.iconButtonText}>Delete</ThemedText>
 
@@ -282,6 +354,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderRadius: 8,
         alignItems: 'center',
+        minHeight: 48, // Ensure consistent button height
+        flexDirection: 'row', // For ActivityIndicator and Text
+
         justifyContent: 'center',
         flex: 1, // Make buttons take equal space if in a row
     },
@@ -313,4 +388,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
     },
+    buttonDisabled: {
+        backgroundColor: '#A9A9A9', // A generic disabled color
+    }
 });

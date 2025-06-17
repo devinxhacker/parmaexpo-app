@@ -766,6 +766,35 @@ app.post('/api/tests', async (req, res) => {
     }
 });
 
+// Get a single test's details by test_id
+app.get('/api/tests/:testId', async (req, res) => {
+    let connection;
+    try {
+        const { testId } = req.params;
+        connection = await pool.getConnection();
+        // Select all relevant columns for a single test
+        const [results] = await connection.execute(
+            'SELECT test_id, test_name, test_rate, report_heading, test_code, method, comments, category_id FROM test WHERE test_id = ?',
+            [testId]
+        );
+        connection.release();
+
+        if (results.length > 0) {
+            res.json({
+                success: true,
+                test: results[0] // Send the single test object
+            });
+        } else {
+            res.status(404).json({ success: false, message: 'Test not found' });
+        }
+    } catch (error) {
+        console.error('Get test detail error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching test details' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
 // Update test endpoint (PUT /api/tests/:testId)
 app.put('/api/tests/:testId', async (req, res) => {
     let connection;

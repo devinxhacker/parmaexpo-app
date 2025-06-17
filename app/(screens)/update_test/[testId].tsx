@@ -36,21 +36,21 @@ export default function UpdateTestScreen() {
             setFormLoading(true);
             try {
                 const [categoriesRes, testsRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/api/categories`),
-                    fetch(`${API_BASE_URL}/api/tests`) // Fetch all tests to find the current one
+                    fetch(`${API_BASE_URL}/api/categories`), // Fetch categories for the dropdown
+                    fetch(`${API_BASE_URL}/api/tests/${testId}`) // Fetch specific test details
                 ]);
 
                 const categoriesData = await categoriesRes.json();
                 if (categoriesData.success) setCategories(categoriesData.categories);
                 else console.warn("Failed to load categories for update screen");
 
-                const allTestsData = await testsRes.json();
-                if (allTestsData.success) {
-                    const currentTest = allTestsData.tests.find((t: any) => t.test_id.toString() === testId);
-                    if (currentTest) {
+                const testDetailData = await testsRes.json();
+                if (testsRes.ok && testDetailData.success) {
+                    const currentTest = testDetailData.test;
+                    if (currentTest) { // Should always be true if response is ok and success
                         setTestData({
                             test_name: currentTest.test_name,
-                            test_rate: currentTest.test_rate?.toString() || '',
+                            test_rate: currentTest.test_rate?.toString() || '0', // Ensure test_rate is a string
                             report_heading: currentTest.report_heading || '',
                             test_code: currentTest.test_code || '',
                             method: currentTest.method || '',
@@ -62,7 +62,7 @@ export default function UpdateTestScreen() {
                         router.back();
                     }
                 } else {
-                    throw new Error(allTestsData.message || "Failed to fetch test details");
+                    throw new Error(testDetailData.message || "Failed to fetch test details");
                 }
             } catch (error: any) {
                 Alert.alert("Error", error.message || "Could not load test data.");
@@ -72,7 +72,7 @@ export default function UpdateTestScreen() {
             }
         };
         fetchInitialData();
-    }, [testId]);
+    }, [testId, router]);
 
     const handleUpdateTest = async () => {
         if (!testId || !testData.test_name || !testData.test_rate || testData.category_id === undefined) {
